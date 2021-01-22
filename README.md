@@ -1,1 +1,1 @@
-# DeepLearning-Exercises---just-tougher-ones-for-reference
+Adding some interesting workbooks from deeplearning courses in coursera

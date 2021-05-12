@@ -1,0 +1,129 @@
+---
+title: "Sentiment_Embeddings"
+author: "Adrian Carles"
+date: "5/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE, results=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Install and import packages
+```{r , message=FALSE, warning=FALSE , echo=FALSE, results=FALSE }
+# install.packages(c( "dplyr","tidyr","data.table","googledrive") )
+x <- c( "dplyr","tidyr","data.table","googledrive","caret")
+z = lapply(x, require, character.only = TRUE)
+```
+
+<!-- ## Download file from google drive -->
+<!-- ```{r} -->
+<!-- filepath = paste( getwd(), '/twitter.zip', sep='') -->
+<!-- drive_download( -->
+<!--   'https://drive.google.com/file/d/13p4FBnA4O3-jZDqv9wLplRJ42mIFv0Gw/view?usp=sharing', -->
+<!--   path = filepath, -->
+<!--   overwrite = TRUE) -->
+<!-- ``` -->
+
+<!-- ## Unzip file -->
+<!-- ```{r} -->
+<!-- unzip(zipfile = filepath -->
+<!--       , overwrite = TRUE) -->
+
+<!-- ``` -->
+
+## Read the input file into a dataframe
+```{r}
+filename = paste( getwd(), 'training.1600000.processed.noemoticon - Copy.csv', sep='/')
+twitter_raw <- read.csv(filename, sep=',', header= FALSE)
+```
+
+
+```{r}
+colnames( twitter_raw ) <- c("Target","ID","DateTime","NO_QUERY","Name","Description")
+```
+
+## Load the word embeddings from the 50 dimensional one ( can use bigger later)
+```{r}
+# Load the word embeddings as df 
+# load glove vectors into R
+vectors = data.table::fread('C:/Users/admin/Downloads/glove.6B.50d.txt', data.table = F
+                            ,  encoding = 'UTF-8')
+colnames(vectors) = c('word',paste('dim',1:50,sep = '_'))
+
+vecDf <- as_tibble(vectors)
+head(vecDf)
+```
+
+## Clean the dataframe with the twitter text
+```{r}
+library(tm)
+twitter_raw$Description <- tolower( twitter_raw$Description )
+# twitter_raw['Desc'] <- sapply(twitter_raw$Description, function(row) iconv(row, "latin1", "ASCII", sub=""))
+```
+
+```{r}
+twitter_raw['Desc']  <- removePunctuation(twitter_raw$Desc)
+# twitter_raw['Desc']  <- sapply(twitter_raw$Desc , stripWhitespace) 
+twitter_raw['Desc']  <- removeNumbers(twitter_raw$Desc) 
+twitter_raw['Desc']  <- removeWords(x=twitter_raw$Desc, words = stopwords(kind="en")) 
+
+```
+
+```{r}
+lines <- twitter_raw$Desc
+```
+
+## Create an empty data frame
+```{r}
+fill_df1 <- data.frame( vecDf[0,1:51])
+colnames(fill_df1)[1] <- "tweet"
+```
+
+
+```{r}
+library(stringr)
+library(comprehenr)
+x <- 0
+
+for (line in lines )
+{
+words = data.frame( t( str_split(line, " ", simplify = TRUE )  ) )
+colnames(words) = "word"
+# View(words) Join with vecdf to get embeddings.
+embeddings_row <- merge(x = words, y = vecDf, by = "word" )
+embeddings_avg <- data.frame( t( colMeans(embeddings_row[, 2:51]) ) )
+# embeddings_avg['tweet'] = line
+
+fill_df1 <- rbind(fill_df1, embeddings_avg)
+
+x <- x + 1
+print(x)
+                        
+}
+```
+
+```{r}
+newdf = data.frame( twitter_raw[ 1: 191638, c("Description","Desc","Target") ])
+
+fill_df1_train_positive <- cbind(fill_df1, newdf )
+
+```
+
+
+```{r}
+newdf = data.frame( twitter_raw[ 1: 177687, c("Description","Desc","Target") ])
+
+fill_df1_train_negative <- cbind(fill_df, newdf )
+
+```
+
+
+
+
+```{r}
+write.csv( fill_df1_train_negative ,"fill_df_train_negative.csv", row.names = FALSE)
+
+```
+
+

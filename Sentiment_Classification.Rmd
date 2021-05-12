@@ -1,0 +1,90 @@
+---
+title: "Sentiment classification"
+author: "Adrian Carles"
+date: "5/6/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Install and import packages
+```{r , message=FALSE, warning=FALSE , echo=FALSE, results=FALSE }
+# install.packages(c( "dplyr","tidyr","data.table","googledrive") )
+x <- c( "dplyr","tidyr","data.table","googledrive","caret")
+z = lapply(x, require, character.only = TRUE)
+```
+
+## Download file from google drive
+```{r }
+# Load the dataset
+# binary_df = read.table(file = 'C:\\Users\\admin\\Downloads\\binary_df.csv'
+#                     , na.strings = c("",NA) , sep="," 
+#                     , nrows = 10000
+#                     , header = T)
+
+binary_df = read.table( file = 'C:\\Users\\admin\\Downloads\\tfidf_df.csv'
+                     , na.strings = c("",NA) , sep=","
+                    , nrows = 10000
+                    , header = T)
+```
+
+
+## Read label file
+```{r }
+# labels = read.delim('C:\\Users\\admin\\Downloads\\labels.txt'
+#                     , header = FALSE, sep = ",")
+# labels_t = t(labels)
+```
+
+## convert labels to dataframe and add it as a column to binary_df
+```{r }
+labels_d = data.frame(labels_t)
+labels_d[500000,] = '0'
+labels_d[1,] = '1'
+labels_d$labels_t =  as.integer ( labels_d$labels_t  )
+```
+
+## use Just the first 100,000 for target
+
+```{r }
+binary_df$X <- NULL
+binary_df <- Filter(var, binary_df)
+binary_df['target'] = as.factor( labels_d[1:10000 ,])
+```
+
+# Training our first model with 100,000 rows
+```{r }
+library(caret)
+sample = createDataPartition(
+  binary_df$target,
+  times = 1,
+  p = 0.95, list = FALSE
+)
+training <- binary_df[sample,]
+testing <- binary_df[-sample, ]
+```
+## Start training
+
+```{r }
+start_time <- Sys.time()
+modRF <- train( target~., data=training, method="J48")
+end_time <- Sys.time()
+end_time - start_time
+```
+
+## Predict and calculate test set accuracy
+
+```{r }
+predRF <- predict(modRF, newdata= testing )
+tableRF <-table(modRF, testing$classe)
+tableRF
+```
+
+
+```{r }
+sum(diag(tableRF))/ sum(tableRF) 
+
+```
